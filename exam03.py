@@ -1,7 +1,8 @@
-# 設問１
+# 設問3
 from datetime import datetime
 from collections import deque
-from typing import Dict
+from typing import Dict, Union
+from copy import deepcopy
 
 
 class init_param:
@@ -94,7 +95,7 @@ def read_ping_log(FILE_PATH: str) -> list[Ping_log]:
     return log_list
 
 
-def parse_log(log_list: list[Ping_log], input_value) -> None:
+def parse_log(log_list: list[Ping_log], input_value) -> list[list[str, str, datetime, datetime]]:
     """
     Ping_log型に加工したログを読み込む
 
@@ -103,6 +104,7 @@ def parse_log(log_list: list[Ping_log], input_value) -> None:
     """
 
     server_dict: Dict[str, Server] = {}  # key:サーバーのアドレス, value:Serverオブジェクト
+    parsing_results: list[list[str, str, datetime, datetime]] = []  # 解析結果を保持するためのリスト
 
     # ログを一行分ずつ解析
     for log in log_list:
@@ -111,20 +113,25 @@ def parse_log(log_list: list[Ping_log], input_value) -> None:
         if log._address not in server_dict:
             server_dict[log._address] = Server(input_value._M)
 
-        # 故障期間の記録と解析
-        check_failure(log, server_dict[log._address], input_value)
-        # 過負荷の記録と解析
-        check_overload(log, server_dict[log._address], input_value)
+        # 故障期間の記録を取得
+        parsing_results.append(check_failure(log, server_dict[log._address], input_value))
+
+        # 過負荷の記録を取得
+        parsing_results.append(check_overload(log, server_dict[log._address], input_value))
 
     # ログ上で復旧していないサーバーの記録を出力
     for key in server_dict:
         if server_dict[key]._timeout_counter >= input_value._N:
-            output_report("failure", key, server_dict[key]._timeout_date, "No data")
+            parsing_results.append(["failure", key, server_dict[key]._timeout_date, "No data"])
+
         if server_dict[key]._is_overload:
-            output_report("overload", key, server_dict[key]._overload_date, "No data")
+            parsing_results.append(["overload", key, server_dict[key]._overload_date, "No data"])
+
+    # 解析結果を返す
+    return parsing_results
 
 
-def check_failure(log, ser_obj, input_value) -> None:
+def check_failure(log, ser_obj, input_value) -> Union[list[str, str, datetime, datetime], None]:
     """
     過去の記録と照合し故障期間を算出する
     """
@@ -149,17 +156,21 @@ def check_failure(log, ser_obj, input_value) -> None:
         # 前の応答結果がタイムアウトであった & タイムアウトの連続上限を超えていた場合
         elif ser_obj._timeout_counter >= input_value._N:
 
-            # アドレスと期間を出力する
-            output_report("failure", log._address, ser_obj._timeout_date, log._date)
+            # 解析結果をコピーして保持
+            report = ["failure", deepcopy(log._address), deepcopy(ser_obj._timeout_date), deepcopy(log._date)]
 
             # 復旧したサーバーは故障リストから外す
             ser_obj._timeout_counter = 0
+
+            return report
+
         else:
             # 復旧したサーバーは故障リストから外す
             ser_obj._timeout_counter = 0
+    return None
 
 
-def check_overload(log, ser_obj, input_value) -> None:
+def check_overload(log, ser_obj, input_value) -> Union[list[str, str, datetime, datetime], None]:
     """
     過去の記録と照合しサーバーの状態が過負荷であるかを算出する
     また、Serverオブジェクトの更新も行う
@@ -181,8 +192,32 @@ def check_overload(log, ser_obj, input_value) -> None:
     elif ser_obj._is_overload:
         ser_obj._is_overload = False
 
-        # 過負荷を検知した日時～過負荷の解消を検知した日時までを出力
-        output_report("overload", log._address, ser_obj._overload_date, log._date)
+        # 解析結果をコピーして保持
+        report = ["overload", deepcopy(log._address), deepcopy(ser_obj._overload_date), deepcopy(log._date)]
+        return report
+
+    return None
+
+
+def output_results(results: list[list[str, str, datetime, datetime]]) -> None:
+    """
+    解析結果を読み出し出力用のメソッドへ渡す
+    結果がNoneであった場合は渡さない
+
+    """
+    for report in results:
+        if report is not None:
+
+            # サーバーの状態、アドレス、故障日時、復旧日時に分割
+            report_value = (v for v in report)
+
+            status = next(report_value)
+            address = next(report_value)
+            found_date = next(report_value)
+            recovery_date = next(report_value)
+
+            # 出力する
+            output_report(status, address, found_date, recovery_date)
 
 
 def output_report(status, address, found_date, recovery_date) -> None:
@@ -195,7 +230,7 @@ def output_report(status, address, found_date, recovery_date) -> None:
         recovery_date (datetime): 異常からの復旧が確認された日時
     """
 
-    print("{:<9}:{:<16}:{:<22}{:<10}".format(status, address, str(found_date), str(recovery_date)))
+    print(":{:<10}:{:<16}:{:<22}:{:<10}".format(status, address, str(found_date), str(recovery_date)))
 
 
 def main():
@@ -208,9 +243,16 @@ def main():
     # ファイルデータの読み取り
     log_list: list[Ping_log] = read_ping_log(FILE_PATH)
 
-    # 記録の解析と出力
-    print("{:<9}:{:<16}:{:<22}{:<10}".format("", "address", "failure found", "confirm recovery"))
-    parse_log(log_list, input_value)
+    # ログを解析し結果を取得
+    results = parse_log(log_list, input_value)
+
+    # ヘッダー出力
+    print("")
+    output_report("status", "address", "failure found", "confirm recovery")
+    print("")
+
+    # 解析結果の出力
+    output_results(results)
 
 
 main()

@@ -1,4 +1,4 @@
-# 設問１
+# 設問1
 from datetime import datetime
 from typing import Dict
 

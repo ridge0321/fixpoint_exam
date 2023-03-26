@@ -118,7 +118,7 @@ class init_param:
 
 
 def main():
-    FILE_PATH = "log04.txt"
+    FILE_PATH = "log.txt"
 
     # パラメータの設定
     input_value = init_param()

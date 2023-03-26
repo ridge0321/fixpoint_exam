@@ -91,7 +91,7 @@ def output_failure_report(address, failure_date, recovery_date) -> None:
 
 
 def main():
-    FILE_PATH = "log04.txt"
+    FILE_PATH = "log.txt"
     # ファイルデータの読み取り
     log_list: list[Ping_log] = read_ping_log(FILE_PATH)
 

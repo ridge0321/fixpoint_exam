@@ -333,7 +333,7 @@ def output_report(status, ip, found_date, recovery_date) -> None:
         recovery_date (datetime): 異常からの復旧が確認された日時
     """
 
-    print(":{:<15}:{:<16}:{:<22}:{:<10}".format(status, str(ip), str(found_date), str(recovery_date)))
+    print(":{:<15}:{:<17}:{:<22}:{:<10}".format(status, str(ip), str(found_date), str(recovery_date)))
 
 
 def main():

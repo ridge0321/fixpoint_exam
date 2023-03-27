@@ -32,16 +32,14 @@ class Ping_log:
 
     def __init__(self, f_line) -> None:
         # 一行分のログを日付、アドレス、応答結果に分割
-        str_date, str_ip_pre, str_res = map(str, f_line.split(","))
-        str_ip, str_pre = map(str, str_ip_pre.split("/"))
+        str_date, str_ip, str_res = map(str, f_line.split(","))
+        # str_ip, str_pre = map(str, str_ip_pre.split("/"))
 
         # オブジェクトとして保持
         self._date = datetime.strptime(str_date, "%Y%m%d%H%M%S")
         self._ip = get_ipadress_obj(str_ip)
         self._res = str_res.replace("\n", "")
         self._subnet = get_network_address(str_ip)
-
-        # print(get_ipadress_obj(str_ip))
 
 
 class Server:
@@ -288,7 +286,7 @@ def check_subnet_failure(log, ser_dict, sbn_obj) -> Union[list[str, ipad.IPv4Add
 
 def get_network_address(ip):
     """
-    ipアドレスをIPv4Networkオブジェクトに変換する
+    ipアドレスをIPv4Networkオブジェクトに変換しネットワークアドレスを返す
 
     """
     network = ipad.IPv4Network(ip, strict=False)
@@ -297,10 +295,10 @@ def get_network_address(ip):
 
 def get_ipadress_obj(ip):
     """
-    ipアドレスをIPv4Networkオブジェクトに変換しネットワークアドレスを返す
+    ipアドレスをIPv4Networkオブジェクトに変換する
 
     """
-    ip_obj = ipad.ip_address(ip)
+    ip_obj = ipad.ip_interface(ip)
     return ip_obj
 
 
@@ -339,7 +337,7 @@ def output_report(status, ip, found_date, recovery_date) -> None:
 
 
 def main():
-    FILE_PATH = "log05.txt"
+    FILE_PATH = "log.txt"
 
     # パラメータの設定
     input_value = init_param()

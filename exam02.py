@@ -87,7 +87,7 @@ def check_failure(log_list: list[Ping_log], input_value) -> None:
 
     # ログ上で復旧していないサーバーの故障記録を出力
     for key in failure_server_dict:
-        if failure_server_dict[log._address][COUNT_INDEX] >= input_value.N:
+        if failure_server_dict[key][COUNT_INDEX] >= input_value.N:
             output_failure_report(key, failure_server_dict[key][DATE_INDEX], "No data")
 
 

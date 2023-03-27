@@ -13,16 +13,36 @@ class init_param:
     """
 
     def __init__(self) -> None:
+        self.input_params()
+        print("\nN:%d, m:%d, t:%d" % (self._N, self._M, self._T))
+
+    def input_params(self) -> None:
         print("N回以上連続してタイムアウトした場合にのみ故障とみなします")
         print("Nの値を入力してください")
-        self._N = int(input())
+        # self._N = int(input())
+        self._N = input_int_value()
 
-        print("直近m回の平均応答時間がtミリ秒を超えた場合は、サーバが過負荷状態になっているとみなします。")
+        print("\n直近m回の平均応答時間がtミリ秒を超えた場合は、サーバが過負荷状態になっているとみなします")
         print("mの値を入力してください")
-        self._M = int(input())
+        self._M = input_int_value()
 
-        print("tの値を入力してください")
-        self._T = int(input())
+        print("\ntの値を入力してください")
+        self._T = input_int_value()
+
+
+def input_int_value() -> int:
+    """
+    int型の入力を受け取る
+    int型以外の入力を受け取ったときは再度入力を受け付ける
+
+    """
+    try:
+        return int(input())
+
+    except ValueError:
+        print("\n整数以外の値が入力されました")
+        print("正しい値を入力してください")
+        return input_int_value()
 
 
 class Ping_log:
@@ -110,10 +130,13 @@ def read_ping_log(FILE_PATH: str) -> list[Ping_log]:
     """
 
     log_list = []
-    with open(FILE_PATH, "r") as f:
+    try:
+        with open(FILE_PATH, "r") as f:
 
-        for f_line in f:
-            log_list.append(Ping_log(f_line))
+            for f_line in f:
+                log_list.append(Ping_log(f_line))
+    except FileNotFoundError:
+        print("エラー：指定されたファイルが見つかりません")
 
     return log_list
 
@@ -142,13 +165,13 @@ def parse_log(log_list: list[Ping_log], input_value) -> list[list[str, ipad.IPv4
             server_dict[log._ip] = Server(input_value)
             network_dict[log._subnet]._server_list.append(log._ip)
 
-        # 故障期間の記録を取得
+        # 故障期間の記録を追記
         parsing_results.append(check_failure(log, server_dict[log._ip], input_value))
 
-        # 過負荷の記録を取得
+        # 過負荷の記録を追記
         parsing_results.append(check_overload(log, server_dict[log._ip], input_value))
 
-        # スイッチの故障を判定
+        # スイッチの故障を追記
         parsing_results.append(check_subnet_failure(log, server_dict, network_dict[log._subnet]))
 
     # ログ上で復旧していないサーバーの記録を加筆
@@ -232,7 +255,7 @@ def check_overload(log, ser_obj, input_value) -> Union[list[str, ipad.IPv4Addres
             ser_obj._is_overload = True
             ser_obj._overload_date = log._date
 
-    # 負荷が正常値の場合
+    # 今回負荷が正常値 & 前回過負荷であった場合
     elif ser_obj._is_overload:
         ser_obj._is_overload = False
 
@@ -274,6 +297,8 @@ def check_subnet_failure(log, ser_dict, sbn_obj) -> Union[list[str, ipad.IPv4Add
         # サブネット内の異常が復旧した場合
         else:
             sbn_obj._is_subnet_failure = False
+
+            # 解析結果をコピー返す
             report = [
                 "subnet_error",
                 deepcopy(sbn_obj._subnet),
@@ -311,7 +336,7 @@ def output_results(results: list[list[str, str, datetime, datetime]]) -> None:
     for report in results:
         if report is not None:
 
-            # サーバーの状態、アドレス、故障日時、復旧日時に分割
+            # サーバーの状態、アドレス、故障日時、復旧日時に分ける
             report_value = (v for v in report)
 
             status = next(report_value)
@@ -319,7 +344,7 @@ def output_results(results: list[list[str, str, datetime, datetime]]) -> None:
             found_date = next(report_value)
             recovery_date = next(report_value)
 
-            # 出力する
+            # ログを出力する
             output_report(status, ip, found_date, recovery_date)
 
 
@@ -337,6 +362,7 @@ def output_report(status, ip, found_date, recovery_date) -> None:
 
 
 def main():
+    # 読み込むログのパス
     FILE_PATH = "log.txt"
 
     # パラメータの設定
